@@ -28,16 +28,18 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (command === 'start-capture') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    chrome.storage.local.get(['lastName', 'lastSuffix', 'lastResponsive'], (res) => {
-      const name = res.lastName || 'screenshot';
-      const suffix = res.lastSuffix || '';
-      const responsive = res.lastResponsive || false;
+    chrome.storage.local.get(['lastName', 'lastSuffix', 'lastResponsive', 'lastBreakpoints'], (res) => {
+      const name        = res.lastName       || 'screenshot';
+      const suffix      = res.lastSuffix     || '';
+      const responsive  = res.lastResponsive || false;
+      const breakpoints = res.lastBreakpoints || null;
 
       chrome.tabs.sendMessage(tab.id, {
         action: 'startCapture',
         name,
         suffix,
-        responsive
+        responsive,
+        breakpoints,
       });
     });
   }

@@ -1,11 +1,20 @@
 <!DOCTYPE html>
 <html>
-<body style="font-family:sans-serif; padding:10px; width:200px;">
-  <input id="name" placeholder="Enter name" style="width:100%;" autofocus />
-  <input id="suffix" placeholder="Enter suffix (optional)" style="width:100%; margin-top:6px;" />
-  <label style="display:block; margin-top:6px; font-size:12px;">
-    <input type="checkbox" id="responsive" /> Responsive screenshot
-  </label>
+<body style="font-family:sans-serif; padding:10px; width:250px;">
+  <input id="name" placeholder="Enter name" style="width:100%; box-sizing:border-box;" autofocus />
+  <input id="suffix" placeholder="Enter suffix (optional)" style="width:100%; box-sizing:border-box; margin-top:6px;" />
+
+  <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
+    <label style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:#f0f0f0; cursor:pointer; font-weight:600; margin:0;">
+      <input type="checkbox" id="responsive-toggle" /> Responsive capture
+    </label>
+    <div id="device-panel" style="display:none; border-top:1px solid #ccc; padding:6px 8px;">
+      <div id="device-list"></div>
+      <div id="custom-rows"></div>
+      <button id="add-custom" type="button" style="margin-top:5px; width:100%; font-size:11px; padding:3px 0; cursor:pointer;">+ Add custom width</button>
+    </div>
+  </div>
+
   <button id="start" style="margin-top:8px; width:100%;">Capture</button>
 
   <script src="popup.js"></script>

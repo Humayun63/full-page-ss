@@ -110,7 +110,7 @@ async function startFullPageCapture(name, suffix) {
   await captureFullPage(name, suffix, device);
 }
 
-async function startResponsiveCapture(name, suffix) {
+async function startResponsiveCapture(name, suffix, breakpoints) {
   const style = document.createElement('style');
   style.innerHTML = `
     #wpadminbar { display: none !important; }
@@ -122,15 +122,9 @@ async function startResponsiveCapture(name, suffix) {
 
   const originalWidth = window.outerWidth;
 
-  const breakpoints = [
-    { width: 1920, device: 'desktop' },
-    { width: 991,  device: 'tablet' },
-    { width: 575,  device: 'mobile' },
-  ];
-
-  for (const { width, device } of breakpoints) {
+  for (const { width, label } of breakpoints) {
     await resizeToViewport(width);
-    await captureFullPage(name, suffix, device);
+    await captureFullPage(name, suffix, label);
   }
 
   // Restore original window size
@@ -139,8 +133,8 @@ async function startResponsiveCapture(name, suffix) {
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === 'startCapture') {
-    if (msg.responsive) {
-      startResponsiveCapture(msg.name, msg.suffix);
+    if (msg.responsive && msg.breakpoints && msg.breakpoints.length > 0) {
+      startResponsiveCapture(msg.name, msg.suffix, msg.breakpoints);
     } else {
       startFullPageCapture(msg.name, msg.suffix);
     }
