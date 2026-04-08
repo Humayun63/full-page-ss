@@ -26,6 +26,7 @@ const settingsToggle    = document.getElementById('settings-toggle');
 const settingsPanel     = document.getElementById('settings-panel');
 const imgbbApiKeyInput  = document.getElementById('imgbb-api-key');
 const saveApiKeyBtn     = document.getElementById('save-api-key');
+const clearApiKeyBtn    = document.getElementById('clear-api-key');
 const apiKeyStatus      = document.getElementById('api-key-status');
 const actionUpload      = document.getElementById('action-upload');
 const actionUploadCopy  = document.getElementById('action-upload-copy');
@@ -157,6 +158,38 @@ saveApiKeyBtn.addEventListener('click', () => {
     
     // Enable upload options
     updateUploadOptionsState(true);
+    
+    // Enable Clear button
+    clearApiKeyBtn.disabled = false;
+    clearApiKeyBtn.style.opacity = '1';
+    clearApiKeyBtn.style.cursor = 'pointer';
+    
+    // Hide status after 3 seconds
+    setTimeout(() => {
+      apiKeyStatus.style.display = 'none';
+    }, 3000);
+  });
+});
+
+clearApiKeyBtn.addEventListener('click', () => {
+  if (!confirm('Are you sure you want to clear the API key? Upload features will be disabled.')) {
+    return;
+  }
+  
+  // Clear from storage
+  chrome.storage.local.remove('imgbbApiKey', () => {
+    imgbbApiKeyInput.value = '';
+    apiKeyStatus.textContent = '✅ API key cleared successfully!';
+    apiKeyStatus.style.color = '#4CAF50';
+    apiKeyStatus.style.display = 'block';
+    
+    // Disable upload options
+    updateUploadOptionsState(false);
+    
+    // Disable Clear button
+    clearApiKeyBtn.disabled = true;
+    clearApiKeyBtn.style.opacity = '0.5';
+    clearApiKeyBtn.style.cursor = 'not-allowed';
     
     // Hide status after 3 seconds
     setTimeout(() => {
@@ -385,6 +418,11 @@ function loadApiKey() {
     
     // Update upload options state
     updateUploadOptionsState(hasApiKey);
+    
+    // Update Clear button state
+    clearApiKeyBtn.disabled = !hasApiKey;
+    clearApiKeyBtn.style.opacity = hasApiKey ? '1' : '0.5';
+    clearApiKeyBtn.style.cursor = hasApiKey ? 'pointer' : 'not-allowed';
   });
 }
 
