@@ -37,6 +37,18 @@
 
   <button id="start" style="margin-top:8px; width:100%;">Capture</button>
 
+  <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
+    <label style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:#f0f0f0; cursor:pointer; font-weight:600; margin:0;">
+      <input type="checkbox" id="history-toggle" /> History
+    </label>
+    <div id="history-panel" style="display:none; border-top:1px solid #ccc; padding:6px 8px; max-height:300px; overflow-y:auto;">
+      <div id="history-list" style="font-size:11px;">
+        <div style="color:#999; text-align:center; padding:10px 0;">No history yet</div>
+      </div>
+      <button id="clear-history" type="button" style="margin-top:6px; width:100%; font-size:11px; padding:3px 0; cursor:pointer; background:#f44336; color:white; border:none; border-radius:3px;">Clear History</button>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

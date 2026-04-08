@@ -9,6 +9,10 @@ const responsiveToggle  = document.getElementById('responsive-toggle');
 const devicePanel       = document.getElementById('device-panel');
 const deviceList        = document.getElementById('device-list');
 const customRowsEl      = document.getElementById('custom-rows');
+const historyToggle     = document.getElementById('history-toggle');
+const historyPanel      = document.getElementById('history-panel');
+const historyList       = document.getElementById('history-list');
+const clearHistoryBtn   = document.getElementById('clear-history');
 
 // ── Predefined devices ────────────────────────────────────────────────────────
 const PREDEFINED_DEVICES = [
@@ -99,6 +103,13 @@ namingToggle.addEventListener('change', () => {
   namingPanel.style.display = namingToggle.checked ? 'block' : 'none';
 });
 
+historyToggle.addEventListener('change', () => {
+  historyPanel.style.display = historyToggle.checked ? 'block' : 'none';
+  if (historyToggle.checked) {
+    loadHistory();
+  }
+});
+
 responsiveToggle.addEventListener('change', () => {
   devicePanel.style.display = responsiveToggle.checked ? 'block' : 'none';
 });
@@ -173,6 +184,88 @@ function applyDeviceState(state) {
     });
   }
 }
+
+// ── History Management ─────────────────────────────────────────────────────────
+function formatDate(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString();
+}
+
+function loadHistory() {
+  chrome.storage.local.get(['screenshotHistory'], (res) => {
+    const history = res.screenshotHistory || [];
+    
+    if (history.length === 0) {
+      historyList.innerHTML = '<div style="color:#999; text-align:center; padding:10px 0;">No history yet</div>';
+      return;
+    }
+
+    // Sort by timestamp descending (newest first)
+    history.sort((a, b) => b.timestamp - a.timestamp);
+
+    historyList.innerHTML = history.map((item, index) => `
+      <div style="border-bottom:1px solid #eee; padding:6px 0; display:flex; flex-direction:column; gap:4px;">
+        <div style="font-weight:500; word-break:break-word;">${item.filename}</div>
+        <div style="font-size:10px; color:#666; word-break:break-all;">${item.url}</div>
+        <div style="display:flex; gap:6px; align-items:center; margin-top:2px;">
+          <span style="font-size:10px; color:#999;">${formatDate(item.timestamp)}</span>
+          <button class="copy-filename" data-index="${index}" style="font-size:9px; padding:2px 6px; cursor:pointer; background:#4CAF50; color:white; border:none; border-radius:2px;">Copy Name</button>
+          <button class="open-url" data-index="${index}" style="font-size:9px; padding:2px 6px; cursor:pointer; background:#2196F3; color:white; border:none; border-radius:2px;">Open Page</button>
+          <button class="delete-item" data-index="${index}" style="font-size:9px; padding:2px 6px; cursor:pointer; background:#f44336; color:white; border:none; border-radius:2px;">Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Add event listeners
+    historyList.querySelectorAll('.copy-filename').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        const filename = history[index].filename;
+        navigator.clipboard.writeText(filename).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy Name', 1500);
+        });
+      });
+    });
+
+    historyList.querySelectorAll('.open-url').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        const url = history[index].url;
+        chrome.tabs.create({ url });
+      });
+    });
+
+    historyList.querySelectorAll('.delete-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        history.splice(index, 1);
+        chrome.storage.local.set({ screenshotHistory: history }, () => {
+          loadHistory();
+        });
+      });
+    });
+  });
+}
+
+clearHistoryBtn.addEventListener('click', () => {
+  if (confirm('Clear all screenshot history?')) {
+    chrome.storage.local.set({ screenshotHistory: [] }, () => {
+      loadHistory();
+    });
+  }
+});
 
 // ── Load saved state ──────────────────────────────────────────────────────────
 chrome.storage.local.get([

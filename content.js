@@ -60,6 +60,26 @@ function generateFilename(device, namingConfig) {
   return filename + '.png';
 }
 
+function saveToHistory(filename) {
+  const historyItem = {
+    filename: filename,
+    url: window.location.href,
+    timestamp: Date.now(),
+  };
+
+  chrome.storage.local.get(['screenshotHistory'], (res) => {
+    const history = res.screenshotHistory || [];
+    history.push(historyItem);
+    
+    // Keep only last 50 items to prevent storage bloat
+    if (history.length > 50) {
+      history.shift();
+    }
+    
+    chrome.storage.local.set({ screenshotHistory: history });
+  });
+}
+
 async function resizeToViewport(targetWidth) {
   await new Promise(resolve =>
     chrome.runtime.sendMessage({ action: 'resizeWindow', width: targetWidth }, resolve)
@@ -134,6 +154,9 @@ async function captureFullPage(device, namingConfig) {
     url: finalImage,
     filename: filename
   });
+
+  // Save to history
+  saveToHistory(filename);
 }
 
 async function startFullPageCapture(namingConfig) {
