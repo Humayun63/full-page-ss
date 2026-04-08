@@ -315,7 +315,7 @@ chrome.storage.local.get([
   'lastNamingEnabled', 'lastIncludeDomain', 'lastIncludeTitle', 
   'lastIncludeTime', 'lastIncludeDevice', 'lastCustomName',
   'lastFormat', 'lastQuality', 'lastDelay', 'lastDelayEnabled',
-  'lastDelayMode', 'lastCustomDelay', 'lastAction'
+  'lastDelayMode', 'lastCustomDelay', 'lastAction', 'lastCaptureMode'
 ], (res) => {
   if (res.lastNamingEnabled) {
     namingToggle.checked = true;
@@ -329,6 +329,11 @@ chrome.storage.local.get([
   includeDevice.checked = res.lastIncludeDevice || false;
   
   if (res.lastCustomName) customNameInput.value = res.lastCustomName;
+
+  // Set capture mode (default to full)
+  const captureMode = res.lastCaptureMode || 'full';
+  const modeRadio = document.getElementById(`mode-${captureMode}`);
+  if (modeRadio) modeRadio.checked = true;
 
   // Set format (default to PNG)
   const format = res.lastFormat || 'png';
@@ -386,6 +391,7 @@ async function start() {
   const format          = document.querySelector('input[name="format"]:checked').value;
   const quality         = parseInt(qualitySlider.value, 10);
   const action          = document.querySelector('input[name="action"]:checked').value;
+  const captureMode     = document.querySelector('input[name="captureMode"]:checked').value;
   
   // Get delay value (handle custom input)
   const selectedDelay   = document.querySelector('input[name="delay"]:checked');
@@ -429,10 +435,68 @@ async function start() {
     lastDelayMode:      selectedDelay.value,
     lastCustomDelay:    customDelayInput.value,
     lastAction:         action,
+    lastCaptureMode:    captureMode,
   });
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+  // For interactive modes (area/element), close popup immediately to allow page interaction
+  if (captureMode === 'area' || captureMode === 'element') {
+    // Save settings
+    chrome.storage.local.set({
+      lastResponsive:     responsive,
+      lastDeviceState:    collectDeviceState(),
+      lastBreakpoints:    breakpoints,
+      lastNamingEnabled:  namingEnabled,
+      lastIncludeDomain:  includeDomain.checked,
+      lastIncludeTitle:   includeTitle.checked,
+      lastIncludeTime:    includeTime.checked,
+      lastIncludeDevice:  includeDevice.checked,
+      lastCustomName:     customName,
+      lastFormat:         format,
+      lastQuality:        quality,
+      lastDelay:          delay,
+      lastDelayEnabled:   delayToggle.checked,
+      lastDelayMode:      selectedDelay.value,
+      lastCustomDelay:    customDelayInput.value,
+      lastAction:         action,
+      lastCaptureMode:    captureMode,
+    });
+
+    // Send message and close popup immediately
+    try {
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'startCapture',
+        responsive,
+        breakpoints,
+        namingConfig,
+        formatConfig,
+        delay,
+        captureMode,
+        outputAction: action, // Pass action for content script to handle
+      });
+    } catch (e) {
+      // Try injecting content script first
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      await new Promise(r => setTimeout(r, 200));
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'startCapture',
+        responsive,
+        breakpoints,
+        namingConfig,
+        formatConfig,
+        delay,
+        captureMode,
+        outputAction: action,
+      });
+    }
+    
+    // Close popup to allow page interaction
+    window.close();
+    return;
+  }
+
+  // For non-interactive modes, show status and wait for response
   // Show status indicator
   startButton.disabled = true;
   statusIndicator.style.display = 'block';
@@ -447,6 +511,7 @@ async function start() {
       namingConfig,
       formatConfig,
       delay,
+      captureMode,
     }, (response) => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError);

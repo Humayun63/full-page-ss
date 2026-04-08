@@ -32,11 +32,12 @@ chrome.commands.onCommand.addListener(async (command) => {
       'lastResponsive', 'lastBreakpoints',
       'lastNamingEnabled', 'lastIncludeDomain', 'lastIncludeTitle', 
       'lastIncludeTime', 'lastIncludeDevice', 'lastCustomName',
-      'lastFormat', 'lastQuality', 'lastDelay', 'lastAction'
+      'lastFormat', 'lastQuality', 'lastDelay', 'lastAction', 'lastCaptureMode'
     ], async (res) => {
       const responsive  = res.lastResponsive || false;
       const breakpoints = res.lastBreakpoints || null;
       const action      = res.lastAction || 'download';
+      const captureMode = res.lastCaptureMode || 'full';
 
       const namingConfig = {
         enabled: res.lastNamingEnabled || false,
@@ -63,6 +64,7 @@ chrome.commands.onCommand.addListener(async (command) => {
         namingConfig,
         formatConfig,
         delay,
+        captureMode,
       }, async (response) => {
         if (!response || !response.success) {
           console.error('Capture failed:', response?.error);
