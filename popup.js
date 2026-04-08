@@ -22,6 +22,15 @@ const historyToggle     = document.getElementById('history-toggle');
 const historyPanel      = document.getElementById('history-panel');
 const historyList       = document.getElementById('history-list');
 const clearHistoryBtn   = document.getElementById('clear-history');
+const settingsToggle    = document.getElementById('settings-toggle');
+const settingsPanel     = document.getElementById('settings-panel');
+const imgbbApiKeyInput  = document.getElementById('imgbb-api-key');
+const saveApiKeyBtn     = document.getElementById('save-api-key');
+const apiKeyStatus      = document.getElementById('api-key-status');
+const actionUpload      = document.getElementById('action-upload');
+const actionUploadCopy  = document.getElementById('action-upload-copy');
+const labelUpload       = document.getElementById('label-upload');
+const labelUploadCopy   = document.getElementById('label-upload-copy');
 const statusIndicator   = document.getElementById('status-indicator');
 const statusText        = document.getElementById('status-text');
 const startButton       = document.getElementById('start');
@@ -124,6 +133,36 @@ historyToggle.addEventListener('change', () => {
   if (historyToggle.checked) {
     loadHistory();
   }
+});
+
+settingsToggle.addEventListener('change', () => {
+  settingsPanel.style.display = settingsToggle.checked ? 'block' : 'none';
+});
+
+saveApiKeyBtn.addEventListener('click', () => {
+  const apiKey = imgbbApiKeyInput.value.trim();
+  
+  if (!apiKey) {
+    apiKeyStatus.textContent = '❌ Please enter an API key';
+    apiKeyStatus.style.color = '#f44336';
+    apiKeyStatus.style.display = 'block';
+    return;
+  }
+  
+  // Save to storage
+  chrome.storage.local.set({ imgbbApiKey: apiKey }, () => {
+    apiKeyStatus.textContent = '✅ API key saved successfully!';
+    apiKeyStatus.style.color = '#4CAF50';
+    apiKeyStatus.style.display = 'block';
+    
+    // Enable upload options
+    updateUploadOptionsState(true);
+    
+    // Hide status after 3 seconds
+    setTimeout(() => {
+      apiKeyStatus.style.display = 'none';
+    }, 3000);
+  });
 });
 
 // Format selection handlers
@@ -309,6 +348,46 @@ clearHistoryBtn.addEventListener('click', () => {
   }
 });
 
+// ── Settings Functions ────────────────────────────────────────────────────────
+function updateUploadOptionsState(hasApiKey) {
+  actionUpload.disabled = !hasApiKey;
+  actionUploadCopy.disabled = !hasApiKey;
+  
+  if (hasApiKey) {
+    labelUpload.style.opacity = '1';
+    labelUpload.style.cursor = 'pointer';
+    labelUploadCopy.style.opacity = '1';
+    labelUploadCopy.style.cursor = 'pointer';
+    labelUpload.title = '';
+    labelUploadCopy.title = '';
+  } else {
+    labelUpload.style.opacity = '0.4';
+    labelUpload.style.cursor = 'not-allowed';
+    labelUploadCopy.style.opacity = '0.4';
+    labelUploadCopy.style.cursor = 'not-allowed';
+    labelUpload.title = 'Configure ImgBB API key in Settings first';
+    labelUploadCopy.title = 'Configure ImgBB API key in Settings first';
+    
+    // If either upload option is currently selected, switch to download
+    if (actionUpload.checked || actionUploadCopy.checked) {
+      document.getElementById('action-download').checked = true;
+    }
+  }
+}
+
+function loadApiKey() {
+  chrome.storage.local.get(['imgbbApiKey'], (res) => {
+    const hasApiKey = res.imgbbApiKey && res.imgbbApiKey.trim() !== '';
+    
+    if (hasApiKey) {
+      imgbbApiKeyInput.value = res.imgbbApiKey;
+    }
+    
+    // Update upload options state
+    updateUploadOptionsState(hasApiKey);
+  });
+}
+
 // ── Load saved state ──────────────────────────────────────────────────────────
 chrome.storage.local.get([
   'lastResponsive', 'lastDeviceState', 
@@ -375,6 +454,9 @@ chrome.storage.local.get([
 
   applyDeviceState(res.lastDeviceState);
 });
+
+// Load API key from storage
+loadApiKey();
 
 // ── Capture ───────────────────────────────────────────────────────────────────
 async function start() {
@@ -572,6 +654,76 @@ async function start() {
         }, 1500);
         
         continue;
+      }
+      
+      // Handle upload to ImgBB
+      if (action === 'upload' || action === 'upload_copy') {
+        statusText.textContent = '☁️ Uploading to ImgBB...';
+        
+        try {
+          const uploadResponse = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+              action: 'uploadToImgBB',
+              dataUrl: dataUrl
+            }, resolve);
+          });
+          
+          if (!uploadResponse || !uploadResponse.success) {
+            throw new Error(uploadResponse?.error || 'Upload failed');
+          }
+          
+          const imageUrl = uploadResponse.url;
+          
+          // Handle upload & copy URL
+          if (action === 'upload_copy') {
+            try {
+              await navigator.clipboard.writeText(imageUrl);
+              statusIndicator.style.background = '#4CAF50';
+              statusText.textContent = '✅ Uploaded & URL copied!';
+            } catch (clipErr) {
+              console.warn('Clipboard write failed:', clipErr);
+              statusIndicator.style.background = '#ff9800';
+              statusText.textContent = '✅ Uploaded (clipboard failed)';
+            }
+          } else {
+            statusIndicator.style.background = '#4CAF50';
+            statusText.textContent = '✅ Uploaded successfully!';
+          }
+          
+          // Open image in new tab
+          chrome.tabs.create({ url: imageUrl });
+          
+          // Save to history
+          chrome.storage.local.get(['screenshotHistory'], (res) => {
+            let history = res.screenshotHistory || [];
+            history.unshift({
+              filename: filename,
+              url: imageUrl,
+              timestamp: Date.now()
+            });
+            if (history.length > 50) history = history.slice(0, 50);
+            chrome.storage.local.set({ screenshotHistory: history });
+          });
+          
+          setTimeout(() => {
+            statusIndicator.style.display = 'none';
+            startButton.disabled = false;
+          }, 2000);
+          
+          continue;
+          
+        } catch (uploadErr) {
+          console.error('Upload error:', uploadErr);
+          statusIndicator.style.background = '#f44336';
+          statusText.textContent = '❌ Upload failed: ' + uploadErr.message;
+          
+          setTimeout(() => {
+            statusIndicator.style.display = 'none';
+            startButton.disabled = false;
+          }, 3000);
+          
+          continue;
+        }
       }
       
       // Handle download

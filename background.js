@@ -1,3 +1,67 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// Configuration
+// ══════════════════════════════════════════════════════════════════════════════
+const IMGBB_API_KEY = "YOUR_IMGBB_API_KEY_HERE"; // Replace with your actual API key
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ImgBB Upload Functions
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Convert data URL to base64 string (without data:mime prefix)
+function dataUrlToBase64(dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  return base64;
+}
+
+// Upload image to ImgBB
+async function uploadToImgBB(dataUrl) {
+  try {
+    // Get API key from storage
+    const result = await chrome.storage.local.get(['imgbbApiKey']);
+    const apiKey = result.imgbbApiKey || IMGBB_API_KEY;
+    
+    if (!apiKey || apiKey === "YOUR_IMGBB_API_KEY_HERE") {
+      throw new Error("ImgBB API key not configured. Please set it in Settings.");
+    }
+    
+    const base64 = dataUrlToBase64(dataUrl);
+    
+    const formData = new FormData();
+    formData.append("key", apiKey);
+    formData.append("image", base64);
+    
+    const response = await fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error?.message || "Upload failed");
+    }
+    
+    return {
+      success: true,
+      url: data.data.url,
+      displayUrl: data.data.display_url,
+      deleteUrl: data.data.delete_url,
+      medium: data.data.medium?.url,
+      thumb: data.data.thumb?.url
+    };
+  } catch (error) {
+    console.error('ImgBB upload error:', error);
+    return {
+      success: false,
+      error: error.message || "Upload failed"
+    };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Message Handlers
+// ══════════════════════════════════════════════════════════════════════════════
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'capture') {
     chrome.tabs.captureVisibleTab(null, { format: 'png' }).then(image => {
@@ -16,6 +80,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.action === 'openEditor') {
     chrome.tabs.create({ url: msg.url });
+  }
+
+  if (msg.action === 'uploadToImgBB') {
+    uploadToImgBB(msg.dataUrl).then(result => {
+      sendResponse(result);
+    });
+    return true; // keep channel open for async sendResponse
   }
 
   if (msg.action === 'resizeWindow') {

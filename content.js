@@ -758,6 +758,64 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               continue;
             }
             
+            // Handle upload to ImgBB
+            if (outputAction === 'upload' || outputAction === 'upload_copy') {
+              showNotification('☁️ Uploading to ImgBB...');
+              
+              try {
+                const uploadResponse = await new Promise((resolve) => {
+                  chrome.runtime.sendMessage({
+                    action: 'uploadToImgBB',
+                    dataUrl: dataUrl
+                  }, resolve);
+                });
+                
+                if (!uploadResponse || !uploadResponse.success) {
+                  throw new Error(uploadResponse?.error || 'Upload failed');
+                }
+                
+                const imageUrl = uploadResponse.url;
+                
+                // Handle upload & copy URL
+                if (outputAction === 'upload_copy') {
+                  try {
+                    await navigator.clipboard.writeText(imageUrl);
+                    showNotification('✅ Uploaded & URL copied!');
+                  } catch (clipErr) {
+                    console.warn('Clipboard write failed:', clipErr);
+                    showNotification('✅ Uploaded (clipboard failed)');
+                  }
+                } else {
+                  showNotification('✅ Uploaded successfully!');
+                }
+                
+                // Open image in new tab
+                chrome.runtime.sendMessage({
+                  action: 'openEditor',
+                  url: imageUrl
+                });
+                
+                // Save to history with image URL
+                chrome.storage.local.get(['screenshotHistory'], (res) => {
+                  let history = res.screenshotHistory || [];
+                  history.unshift({
+                    filename: filename,
+                    url: imageUrl,
+                    timestamp: Date.now()
+                  });
+                  if (history.length > 50) history = history.slice(0, 50);
+                  chrome.storage.local.set({ screenshotHistory: history });
+                });
+                
+                continue;
+                
+              } catch (uploadErr) {
+                console.error('Upload error:', uploadErr);
+                showNotification('❌ Upload failed: ' + uploadErr.message, true);
+                continue;
+              }
+            }
+            
             // Handle download
             if (outputAction === 'download' || outputAction === 'both') {
               chrome.runtime.sendMessage({

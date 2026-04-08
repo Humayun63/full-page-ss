@@ -126,9 +126,16 @@
         <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer;">
           <input type="radio" name="action" id="action-edit" value="edit" /> Edit
         </label>
+        <label id="label-upload" style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="radio" name="action" id="action-upload" value="upload" /> Upload to ImgBB
+        </label>
+        <label id="label-upload-copy" style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="radio" name="action" id="action-upload-copy" value="upload_copy" /> Upload & Copy URL
+        </label>
       </div>
       <div style="font-size:10px; color:#666; margin-top:6px;">
-        Download, copy to clipboard, or edit with annotations
+        Download, copy to clipboard, edit with annotations, or upload to ImgBB<br>
+        <span style="color:#ff9800;">⚠ Upload options require API key (configure in Settings)</span>
       </div>
     </div>
   </div>
@@ -159,6 +166,28 @@
         <div style="color:#999; text-align:center; padding:10px 0;">No history yet</div>
       </div>
       <button id="clear-history" type="button" style="margin-top:6px; width:100%; font-size:11px; padding:3px 0; cursor:pointer; background:#f44336; color:white; border:none; border-radius:3px;">Clear History</button>
+    </div>
+  </div>
+
+  <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
+    <label style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:#f0f0f0; cursor:pointer; font-weight:600; margin:0;">
+      <input type="checkbox" id="settings-toggle" /> Settings
+    </label>
+    <div id="settings-panel" style="display:none; border-top:1px solid #ccc; padding:8px;">
+      <div style="margin-bottom:8px;">
+        <label style="display:block; font-weight:600; font-size:11px; margin-bottom:4px;">
+          ImgBB API Key
+          <span style="font-weight:normal; color:#666;">(required for upload)</span>
+        </label>
+        <div style="display:flex; gap:4px;">
+          <input type="text" id="imgbb-api-key" placeholder="Enter your ImgBB API key" style="flex:1; font-size:11px; padding:4px; border:1px solid #ccc; border-radius:3px;" />
+          <button id="save-api-key" type="button" style="font-size:11px; padding:4px 12px; cursor:pointer; background:#4CAF50; color:white; border:none; border-radius:3px; white-space:nowrap;">Save</button>
+        </div>
+        <div id="api-key-status" style="font-size:10px; margin-top:4px; display:none;"></div>
+        <div style="font-size:10px; color:#666; margin-top:6px;">
+          Get your free API key from <a href="https://api.imgbb.com/" target="_blank" style="color:#2196F3;">api.imgbb.com</a>
+        </div>
+      </div>
     </div>
   </div>
 

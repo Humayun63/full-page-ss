@@ -7,8 +7,14 @@ A Chrome extension that captures full-page screenshots with flexible naming, opt
 ## Features
 
 - **Full-page capture** — scrolls the entire page and stitches all visible segments into a single PNG, regardless of page height.
-- **Custom file naming** — set a base name before capturing; the last used name is remembered across sessions.
-- **Optional suffix** — add a suffix between the name and the device label (e.g. `homepage-v2-desktop.png`). Also remembered across sessions.
+- **Multiple capture modes** — Full Page, Visible Area, Select Area (drag to select), Select Element (click element)
+- **Custom file naming** — set a base name before capturing with dynamic variables (domain, title, time, device)
+- **Format selection** — Choose PNG, JPEG, or WebP with quality controls
+- **Output options** — Download, Copy to Clipboard, Edit with Annotations, or Upload to ImgBB
+- **Screenshot history** — Tracks last 50 screenshots with timestamps and URLs
+- **Delay timer** — Capture after 3s, 5s, 10s, or custom delay for dynamic UI states
+- **Annotation tools** — Add arrows, rectangles, highlights, blur sensitive info, and text to screenshots
+- **Upload to ImgBB** — Instantly upload screenshots and get shareable links
 - **Automatic device label** — the device type is appended to the filename based on the current window width:
   - `> 991px` → `-desktop`
   - `> 575px` and `≤ 991px` → `-tablet`
@@ -64,6 +70,27 @@ The file is saved automatically to your default Downloads folder.
 
 The extension will resize the browser window to 1920px, 991px, and 575px in sequence, capturing a full-page screenshot at each size. Three files will be saved automatically.
 
+### Upload to ImgBB
+
+**First-time setup:**
+1. Get a free API key from https://api.imgbb.com/
+2. Open the extension popup
+3. Click "Settings" at the bottom
+4. Enter your API key in the "ImgBB API Key" field
+5. Click "Save"
+
+**Usage:**
+1. Click the extension icon
+2. Configure your screenshot settings
+3. Select **"Upload to ImgBB"** or **"Upload & Copy URL"** as output action
+4. Click **Capture**
+
+**What happens:**
+- **Upload to ImgBB**: Uploads image and opens it in a new tab
+- **Upload & Copy URL**: Uploads image, copies URL to clipboard, and opens it in a new tab
+
+See [IMGBB_SETUP.md](IMGBB_SETUP.md) for detailed setup instructions.
+
 ### Keyboard shortcut
 
 Press **Cmd+Shift+S** (Mac) or **Ctrl+Shift+S** (Windows/Linux) on any tab to start a capture using the last saved name, suffix, and responsive setting — no popup required.
@@ -82,3 +109,5 @@ To change the shortcut, go to `chrome://extensions/shortcuts`.
 | `downloads` | Save screenshots to disk |
 | `storage` | Remember name, suffix, and responsive preference |
 | `windows` | Resize the browser window for responsive mode |
+| `clipboardWrite` | Copy screenshots and URLs to clipboard |
+| `https://api.imgbb.com/*` | Upload screenshots to ImgBB |

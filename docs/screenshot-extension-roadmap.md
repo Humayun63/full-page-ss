@@ -154,9 +154,7 @@ Move beyond full-page screenshots.
 Optional advanced feature.
 
 #### Upload Options:
-- S3
-- Cloudinary
-- Custom API
+- ImgBB
 
 #### Output:
 - Shareable link
