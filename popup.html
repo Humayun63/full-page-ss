@@ -1,8 +1,28 @@
 <!DOCTYPE html>
 <html>
 <body style="font-family:sans-serif; padding:10px; width:250px;">
-  <input id="name" placeholder="Enter name" style="width:100%; box-sizing:border-box;" autofocus />
-  <input id="suffix" placeholder="Enter suffix (optional)" style="width:100%; box-sizing:border-box; margin-top:6px;" />
+  <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
+    <label style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:#f0f0f0; cursor:pointer; font-weight:600; margin:0;">
+      <input type="checkbox" id="naming-toggle" /> Advanced naming
+    </label>
+    <div id="naming-panel" style="display:none; border-top:1px solid #ccc; padding:6px 8px;">
+      <div style="margin-bottom:6px;">
+        <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer; padding:2px 0;">
+          <input type="checkbox" id="include-domain" checked /> Domain
+        </label>
+        <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer; padding:2px 0;">
+          <input type="checkbox" id="include-title" checked /> Title
+        </label>
+        <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer; padding:2px 0;">
+          <input type="checkbox" id="include-time" checked /> Time
+        </label>
+        <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer; padding:2px 0;">
+          <input type="checkbox" id="include-device" /> Device
+        </label>
+      </div>
+      <input id="custom-name" placeholder="Custom name (optional)" style="width:100%; box-sizing:border-box; font-size:11px; padding:4px;" />
+    </div>
+  </div>
 
   <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
     <label style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:#f0f0f0; cursor:pointer; font-weight:600; margin:0;">

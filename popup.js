@@ -1,9 +1,14 @@
-const input            = document.getElementById('name');
-const suffixInput      = document.getElementById('suffix');
-const responsiveToggle = document.getElementById('responsive-toggle');
-const devicePanel      = document.getElementById('device-panel');
-const deviceList       = document.getElementById('device-list');
-const customRowsEl     = document.getElementById('custom-rows');
+const namingToggle      = document.getElementById('naming-toggle');
+const namingPanel       = document.getElementById('naming-panel');
+const includeDomain     = document.getElementById('include-domain');
+const includeTitle      = document.getElementById('include-title');
+const includeTime       = document.getElementById('include-time');
+const includeDevice     = document.getElementById('include-device');
+const customNameInput   = document.getElementById('custom-name');
+const responsiveToggle  = document.getElementById('responsive-toggle');
+const devicePanel       = document.getElementById('device-panel');
+const deviceList        = document.getElementById('device-list');
+const customRowsEl      = document.getElementById('custom-rows');
 
 // ── Predefined devices ────────────────────────────────────────────────────────
 const PREDEFINED_DEVICES = [
@@ -90,6 +95,10 @@ function addCustomRow(width = '') {
 document.getElementById('add-custom').addEventListener('click', () => addCustomRow());
 
 // Toggle panel visibility
+namingToggle.addEventListener('change', () => {
+  namingPanel.style.display = namingToggle.checked ? 'block' : 'none';
+});
+
 responsiveToggle.addEventListener('change', () => {
   devicePanel.style.display = responsiveToggle.checked ? 'block' : 'none';
 });
@@ -166,9 +175,23 @@ function applyDeviceState(state) {
 }
 
 // ── Load saved state ──────────────────────────────────────────────────────────
-chrome.storage.local.get(['lastName', 'lastSuffix', 'lastResponsive', 'lastDeviceState'], (res) => {
-  if (res.lastName)  input.value       = res.lastName;
-  if (res.lastSuffix) suffixInput.value = res.lastSuffix;
+chrome.storage.local.get([
+  'lastResponsive', 'lastDeviceState', 
+  'lastNamingEnabled', 'lastIncludeDomain', 'lastIncludeTitle', 
+  'lastIncludeTime', 'lastIncludeDevice', 'lastCustomName'
+], (res) => {
+  if (res.lastNamingEnabled) {
+    namingToggle.checked = true;
+    namingPanel.style.display = 'block';
+  }
+  
+  // Set naming checkboxes (defaults to checked if not previously saved)
+  includeDomain.checked = res.lastIncludeDomain !== undefined ? res.lastIncludeDomain : true;
+  includeTitle.checked = res.lastIncludeTitle !== undefined ? res.lastIncludeTitle : true;
+  includeTime.checked = res.lastIncludeTime !== undefined ? res.lastIncludeTime : true;
+  includeDevice.checked = res.lastIncludeDevice || false;
+  
+  if (res.lastCustomName) customNameInput.value = res.lastCustomName;
 
   if (res.lastResponsive) {
     responsiveToggle.checked = true;
@@ -176,39 +199,49 @@ chrome.storage.local.get(['lastName', 'lastSuffix', 'lastResponsive', 'lastDevic
   }
 
   applyDeviceState(res.lastDeviceState);
-  input.focus();
 });
 
 // ── Capture ───────────────────────────────────────────────────────────────────
 async function start() {
-  const name = input.value.trim();
-  if (!name) { alert('Enter a name'); return; }
-
-  const suffix     = suffixInput.value.trim();
-  const responsive = responsiveToggle.checked;
-  const breakpoints = responsive ? getBreakpoints() : null;
+  const responsive      = responsiveToggle.checked;
+  const breakpoints     = responsive ? getBreakpoints() : null;
 
   if (responsive && (!breakpoints || breakpoints.length === 0)) {
     alert('Select at least one device for responsive capture.');
     return;
   }
 
+  const namingEnabled   = namingToggle.checked;
+  const customName      = customNameInput.value.trim();
+  
+  const namingConfig = {
+    enabled: namingEnabled,
+    includeDomain: includeDomain.checked,
+    includeTitle: includeTitle.checked,
+    includeTime: includeTime.checked,
+    includeDevice: includeDevice.checked,
+    customName: customName,
+  };
+
   chrome.storage.local.set({
-    lastName:        name,
-    lastSuffix:      suffix,
-    lastResponsive:  responsive,
-    lastDeviceState: collectDeviceState(),
-    lastBreakpoints: breakpoints,
+    lastResponsive:     responsive,
+    lastDeviceState:    collectDeviceState(),
+    lastBreakpoints:    breakpoints,
+    lastNamingEnabled:  namingEnabled,
+    lastIncludeDomain:  includeDomain.checked,
+    lastIncludeTitle:   includeTitle.checked,
+    lastIncludeTime:    includeTime.checked,
+    lastIncludeDevice:  includeDevice.checked,
+    lastCustomName:     customName,
   });
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
   const sendCapture = () => chrome.tabs.sendMessage(tab.id, {
     action: 'startCapture',
-    name,
-    suffix,
     responsive,
     breakpoints,
+    namingConfig,
   });
 
   try {
@@ -221,5 +254,4 @@ async function start() {
 }
 
 document.getElementById('start').addEventListener('click', start);
-input.addEventListener('keydown',      (e) => { if (e.key === 'Enter') start(); });
-suffixInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') start(); });
+
