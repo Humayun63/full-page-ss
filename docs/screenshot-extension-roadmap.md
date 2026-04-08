@@ -101,45 +101,6 @@ Currently only PNG is supported.
 
 ---
 
-### 5. Smooth Capture Experience (No More “Jumping Scroll”)
-
-Current behavior:
-Page scrolls step-by-step during capture → feels distracting
-
-#### Proposed Solution:
-- Hide actual scrolling from user
-- Use:
-  - Offscreen rendering OR
-  - Overlay mask
-
-#### UX Improvement:
-- Show animation overlay like:
-  “Capturing Full Page…”
-  Progress indicator
-
-#### Example Overlay:
-```
-[ Capturing... ███████░░░ 70% ]
-```
-
----
-
-### 6. Capture Animation Layer
-
-Enhance perceived performance with animation.
-
-#### Ideas:
-- Freeze UI visually
-- Add blur overlay
-- Show device icon during responsive capture
-
-#### Example:
-```
-📱 Capturing Mobile View...
-💻 Capturing Desktop View...
-```
-
----
 
 ### 7. Delay Timer for Capture
 
@@ -188,57 +149,6 @@ Move beyond full-page screenshots.
 
 ---
 
-### 10. Sticky & Fixed Element Handling
-
-Fix duplicated elements issue.
-
-#### Problem:
-- Sticky headers repeat in stitched images
-
-#### Solution:
-Temporarily convert:
-position: fixed → absolute
-position: sticky → static
-
-Restore after capture
-
----
-
-### 11. Lazy Load Handling
-
-Ensure all images are captured.
-
-#### Solution:
-- Auto-scroll before capture
-- Wait for images to load
-- Trigger lazy loading manually
-
----
-
-### 12. Very Long Page Handling
-
-Browser canvas limits can break large captures.
-
-#### Solution:
-- Chunk-based stitching
-- Multiple output files (optional)
-
----
-
-### 13. Batch URL Capture
-
-Capture multiple pages automatically.
-
-#### Input Example:
-```
-/home
-/pricing
-/about
-/contact
-```
-
----
-
 ### 14. Cloud Upload (Future SaaS Direction)
 
 Optional advanced feature.
@@ -263,6 +173,8 @@ Basic editing after capture.
 - Rectangle
 - Highlight
 - Blur sensitive info
+- Crop
+- Write
 
 ---
 

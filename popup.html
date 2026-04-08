@@ -84,6 +84,28 @@
   </div>
 
   <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
+    <div style="padding:5px 8px; background:#f0f0f0; font-weight:600;">
+      Output Action
+    </div>
+    <div style="padding:6px 8px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="radio" name="action" id="action-download" value="download" checked /> Download
+        </label>
+        <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="radio" name="action" id="action-clipboard" value="clipboard" /> Clipboard
+        </label>
+        <label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="radio" name="action" id="action-both" value="both" /> Both
+        </label>
+      </div>
+      <div style="font-size:10px; color:#666; margin-top:6px;">
+        Copy to clipboard or download file
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
     <label style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:#f0f0f0; cursor:pointer; font-weight:600; margin:0;">
       <input type="checkbox" id="responsive-toggle" /> Responsive capture
     </label>
@@ -95,6 +117,10 @@
   </div>
 
   <button id="start" style="margin-top:8px; width:100%;">Capture</button>
+  
+  <div id="status-indicator" style="display:none; margin-top:8px; padding:8px; background:#2196F3; color:white; border-radius:4px; text-align:center; font-size:11px;">
+    <div id="status-text">Capturing...</div>
+  </div>
 
   <div style="margin-top:8px; border:1px solid #ccc; border-radius:4px; overflow:hidden; font-size:12px;">
     <label style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:#f0f0f0; cursor:pointer; font-weight:600; margin:0;">

@@ -22,6 +22,9 @@ const historyToggle     = document.getElementById('history-toggle');
 const historyPanel      = document.getElementById('history-panel');
 const historyList       = document.getElementById('history-list');
 const clearHistoryBtn   = document.getElementById('clear-history');
+const statusIndicator   = document.getElementById('status-indicator');
+const statusText        = document.getElementById('status-text');
+const startButton       = document.getElementById('start');
 
 // ── Predefined devices ────────────────────────────────────────────────────────
 const PREDEFINED_DEVICES = [
@@ -312,7 +315,7 @@ chrome.storage.local.get([
   'lastNamingEnabled', 'lastIncludeDomain', 'lastIncludeTitle', 
   'lastIncludeTime', 'lastIncludeDevice', 'lastCustomName',
   'lastFormat', 'lastQuality', 'lastDelay', 'lastDelayEnabled',
-  'lastDelayMode', 'lastCustomDelay'
+  'lastDelayMode', 'lastCustomDelay', 'lastAction'
 ], (res) => {
   if (res.lastNamingEnabled) {
     namingToggle.checked = true;
@@ -339,6 +342,11 @@ chrome.storage.local.get([
   qualityValue.textContent = quality;
   
   updateQualityVisibility();
+
+  // Set action (default to download)
+  const action = res.lastAction || 'download';
+  const actionRadio = document.getElementById(`action-${action}`);
+  if (actionRadio) actionRadio.checked = true;
 
   // Set delay toggle and panel
   if (res.lastDelayEnabled) {
@@ -377,6 +385,7 @@ async function start() {
   const customName      = customNameInput.value.trim();
   const format          = document.querySelector('input[name="format"]:checked').value;
   const quality         = parseInt(qualitySlider.value, 10);
+  const action          = document.querySelector('input[name="action"]:checked').value;
   
   // Get delay value (handle custom input)
   const selectedDelay   = document.querySelector('input[name="delay"]:checked');
@@ -400,6 +409,7 @@ async function start() {
   const formatConfig = {
     format: format,
     quality: quality,
+    outputAction: action,
   };
 
   chrome.storage.local.set({
@@ -418,27 +428,147 @@ async function start() {
     lastDelayEnabled:   delayToggle.checked,
     lastDelayMode:      selectedDelay.value,
     lastCustomDelay:    customDelayInput.value,
+    lastAction:         action,
   });
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-  const sendCapture = () => chrome.tabs.sendMessage(tab.id, {
-    action: 'startCapture',
-    responsive,
-    breakpoints,
-    namingConfig,
-    formatConfig,
-    delay,
+  // Show status indicator
+  startButton.disabled = true;
+  statusIndicator.style.display = 'block';
+  statusText.textContent = 'Initializing capture...';
+
+  // Send capture request
+  const sendCapture = () => new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'startCapture',
+      responsive,
+      breakpoints,
+      namingConfig,
+      formatConfig,
+      delay,
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+      } else {
+        resolve(response);
+      }
+    });
   });
 
   try {
-    await sendCapture();
-  } catch (e) {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-    await new Promise(r => setTimeout(r, 200));
-    await sendCapture();
+    // Initiate capture
+    statusText.textContent = delay > 0 ? `Waiting ${delay}s before capture...` : 'Capturing screenshot...';
+    
+    let response;
+    try {
+      response = await sendCapture();
+    } catch (e) {
+      // Content script not injected, inject it first
+      statusText.textContent = 'Injecting content script...';
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      await new Promise(r => setTimeout(r, 200));
+      statusText.textContent = 'Capturing screenshot...';
+      response = await sendCapture();
+    }
+    
+    if (!response || !response.success) {
+      statusIndicator.style.background = '#f44336';
+      statusText.textContent = '❌ ' + (response?.error || 'Unknown error');
+      setTimeout(() => {
+        statusIndicator.style.display = 'none';
+        startButton.disabled = false;
+      }, 3000);
+      return;
+    }
+    
+    // Process results
+    const results = response.results || [];
+    statusText.textContent = `Processing ${results.length} screenshot(s)...`;
+    
+    for (const result of results) {
+      const { dataUrl, filename, mimeType } = result;
+      
+      // Handle download
+      if (action === 'download' || action === 'both') {
+        chrome.runtime.sendMessage({
+          action: 'download',
+          url: dataUrl,
+          filename: filename
+        });
+      }
+      
+      // Handle clipboard (in popup context - within user gesture)
+      if (action === 'clipboard' || action === 'both') {
+        statusText.textContent = 'Copying to clipboard...';
+        try {
+          // Convert data URL to blob
+          const base64Data = dataUrl.split(',')[1];
+          const binaryData = atob(base64Data);
+          const arrayBuffer = new Uint8Array(binaryData.length);
+          for (let i = 0; i < binaryData.length; i++) {
+            arrayBuffer[i] = binaryData.charCodeAt(i);
+          }
+          const blob = new Blob([arrayBuffer], { type: mimeType });
+          
+          // Copy to clipboard in popup context (reliable)
+          await navigator.clipboard.write([
+            new ClipboardItem({ [mimeType]: blob })
+          ]);
+          
+          console.log('✅ Copied to clipboard (popup context)');
+        } catch (clipErr) {
+          console.warn('Popup clipboard failed, trying fallback:', clipErr);
+          
+          // Fallback: Use content script context
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'copyToClipboard',
+            dataUrl: dataUrl,
+            mimeType: mimeType
+          }, (fallbackResponse) => {
+            if (fallbackResponse && fallbackResponse.success) {
+              console.log('✅ Copied to clipboard (content script fallback)');
+            } else {
+              console.error('❌ Both clipboard methods failed');
+            }
+          });
+        }
+      }
+      
+      // Save to history
+      chrome.storage.local.get(['screenshotHistory'], (res) => {
+        let history = res.screenshotHistory || [];
+        history.unshift({
+          filename: filename,
+          url: tab.url,
+          timestamp: Date.now()
+        });
+        if (history.length > 50) history = history.slice(0, 50);
+        chrome.storage.local.set({ screenshotHistory: history });
+      });
+    }
+    
+    // Success!
+    statusIndicator.style.background = '#4CAF50';
+    statusText.textContent = action === 'clipboard' || action === 'both' 
+      ? '✅ Copied to clipboard!' 
+      : '✅ Downloaded successfully!';
+    
+    setTimeout(() => {
+      statusIndicator.style.display = 'none';
+      startButton.disabled = false;
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Capture error:', error);
+    statusIndicator.style.background = '#f44336';
+    statusText.textContent = '❌ Failed: ' + error.message;
+    setTimeout(() => {
+      statusIndicator.style.display = 'none';
+      startButton.disabled = false;
+    }, 3000);
   }
 }
 
-document.getElementById('start').addEventListener('click', start);
+startButton.addEventListener('click', start);
 

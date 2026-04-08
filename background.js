@@ -32,10 +32,11 @@ chrome.commands.onCommand.addListener(async (command) => {
       'lastResponsive', 'lastBreakpoints',
       'lastNamingEnabled', 'lastIncludeDomain', 'lastIncludeTitle', 
       'lastIncludeTime', 'lastIncludeDevice', 'lastCustomName',
-      'lastFormat', 'lastQuality', 'lastDelay'
-    ], (res) => {
+      'lastFormat', 'lastQuality', 'lastDelay', 'lastAction'
+    ], async (res) => {
       const responsive  = res.lastResponsive || false;
       const breakpoints = res.lastBreakpoints || null;
+      const action      = res.lastAction || 'download';
 
       const namingConfig = {
         enabled: res.lastNamingEnabled || false,
@@ -49,10 +50,12 @@ chrome.commands.onCommand.addListener(async (command) => {
       const formatConfig = {
         format: res.lastFormat || 'png',
         quality: res.lastQuality || 92,
+        outputAction: action,
       };
 
       const delay = res.lastDelay || 0;
 
+      // Send capture request
       chrome.tabs.sendMessage(tab.id, {
         action: 'startCapture',
         responsive,
@@ -60,6 +63,48 @@ chrome.commands.onCommand.addListener(async (command) => {
         namingConfig,
         formatConfig,
         delay,
+      }, async (response) => {
+        if (!response || !response.success) {
+          console.error('Capture failed:', response?.error);
+          return;
+        }
+        
+        // Process results
+        const results = response.results || [];
+        
+        for (const result of results) {
+          const { dataUrl, filename, mimeType } = result;
+          
+          // Handle download
+          if (action === 'download' || action === 'both') {
+            chrome.downloads.download({
+              url: dataUrl,
+              filename: filename,
+              saveAs: false
+            });
+          }
+          
+          // Handle clipboard - use content script context for keyboard shortcuts
+          if (action === 'clipboard' || action === 'both') {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'copyToClipboard',
+              dataUrl: dataUrl,
+              mimeType: mimeType
+            });
+          }
+          
+          // Save to history
+          chrome.storage.local.get(['screenshotHistory'], (histRes) => {
+            let history = histRes.screenshotHistory || [];
+            history.unshift({
+              filename: filename,
+              url: tab.url,
+              timestamp: Date.now()
+            });
+            if (history.length > 50) history = history.slice(0, 50);
+            chrome.storage.local.set({ screenshotHistory: history });
+          });
+        }
       });
     });
   }
