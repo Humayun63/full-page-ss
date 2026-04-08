@@ -741,6 +741,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           for (const result of results) {
             const { dataUrl, filename, mimeType } = result;
             
+            // Handle edit - open editor
+            if (outputAction === 'edit') {
+              const editorUrl = chrome.runtime.getURL('editor.html') + 
+                '?image=' + encodeURIComponent(dataUrl) +
+                '&filename=' + encodeURIComponent(filename) +
+                '&mimeType=' + encodeURIComponent(mimeType);
+              
+              chrome.runtime.sendMessage({
+                action: 'openEditor',
+                url: editorUrl
+              });
+              
+              showNotification('✅ Opening editor...');
+              saveToHistory(filename);
+              continue;
+            }
+            
             // Handle download
             if (outputAction === 'download' || outputAction === 'both') {
               chrome.runtime.sendMessage({

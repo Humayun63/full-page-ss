@@ -14,6 +14,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 
+  if (msg.action === 'openEditor') {
+    chrome.tabs.create({ url: msg.url });
+  }
+
   if (msg.action === 'resizeWindow') {
     const windowId = sender.tab.windowId;
     chrome.windows.update(windowId, { width: msg.width }, () => {

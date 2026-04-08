@@ -554,6 +554,26 @@ async function start() {
     for (const result of results) {
       const { dataUrl, filename, mimeType } = result;
       
+      // Handle edit - open editor in new tab
+      if (action === 'edit') {
+        const editorUrl = chrome.runtime.getURL('editor.html') + 
+          '?image=' + encodeURIComponent(dataUrl) +
+          '&filename=' + encodeURIComponent(filename) +
+          '&mimeType=' + encodeURIComponent(mimeType);
+        
+        chrome.tabs.create({ url: editorUrl });
+        
+        statusIndicator.style.background = '#4CAF50';
+        statusText.textContent = '✅ Opening editor...';
+        
+        setTimeout(() => {
+          statusIndicator.style.display = 'none';
+          startButton.disabled = false;
+        }, 1500);
+        
+        continue;
+      }
+      
       // Handle download
       if (action === 'download' || action === 'both') {
         chrome.runtime.sendMessage({
